@@ -22,6 +22,8 @@ html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:syste
 #obj i{font-style:normal}#obj i.ok{color:#7be07b}
 #stage{flex:1;position:relative;min-height:0;background:linear-gradient(#f6e2b0,#d6b076)}
 canvas{width:100%;height:100%;display:block;touch-action:none}
+#zm{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
+#zm button{width:42px;height:42px;border-radius:10px;border:2px solid #281908;background:#4a2e18e6;color:#fff;font-size:24px;font-weight:700;line-height:1;padding:0}
 #msg{position:absolute;left:0;right:0;top:6px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
 #msg div{padding:6px 12px;border-radius:10px;border:2px solid #281908;font-size:13px;font-weight:700;max-width:92%;text-align:center}
 #ban{background:#ffecaa;color:var(--mar)}#toast{background:#aa3c28;color:#fff}
@@ -54,17 +56,17 @@ canvas{width:100%;height:100%;display:block;touch-action:none}
   <button class="btn r" id="br">Reiniciar</button>
  </div>
  <div id="obj"></div>
- <div id="stage"><canvas id="cv"></canvas><div id="msg"><div id="ban" hidden></div><div id="toast" hidden></div></div></div>
+ <div id="stage"><canvas id="cv"></canvas><div id="zm"><button id="zi">+</button><button id="zo">−</button></div><div id="msg"><div id="ban" hidden></div><div id="toast" hidden></div></div></div>
  <div id="pal"></div>
  <div id="fact"><b>VOCÊ SABIA?</b><span id="ft"></span></div>
 </div>
 <div id="ov"><div id="box"><h1></h1><div id="ol"></div><button class="btn" id="ob"></button></div></div>
 <script>
-const N=9,TW=80,TH=40,TICKS_ANO=10,AI=1312,AF=1337;
-const NOME=["Casa","Fazenda","Mercado","Poço","Mesquita","Escola","Armazém"];
-const DESC=["+8 moradores","produz comida","gera ouro","fornece água","+ouro · cultura","+ouro · saber","+estoque"];
-const CUSTO=[30,40,60,30,80,80,50];
-const COR=["#c48c58","#6eaa46","#c84632","#4696c8","#deba80","#3c6eaa","#be963c"];
+const N=13,TW=80,TH=40,TICKS_ANO=10,AI=1312,AF=1337;
+const NOME=["Casa","Fazenda","Mercado","Poço","Mesquita","Escola","Armazém","Rua"];
+const DESC=["+8 moradores","produz comida","gera ouro","fornece água","+ouro · cultura","+ouro · saber","+estoque","pessoas andam aqui"];
+const CUSTO=[30,40,60,30,80,80,50,5];
+const COR=["#c48c58","#6eaa46","#c84632","#4696c8","#deba80","#3c6eaa","#be963c","#b48c58"];
 const FATOS=["O Mali enriqueceu com o comércio de ouro e sal: o ouro vinha das regiões do sul e o sal, do deserto do Saara. As caravanas cruzavam o deserto em rotas comerciais.",
 "Mansa Musa ficou famoso por sua riqueza e pela peregrinação a Meca em 1324. Ele distribuiu tanto ouro no Cairo que o valor do metal caiu por anos.",
 "O rio Níger foi essencial para o Mali: irrigava plantações de painço e arroz e servia de estrada para canoas de comércio e pesca.",
@@ -76,21 +78,23 @@ const FATOS=["O Mali enriqueceu com o comércio de ouro e sal: o ouro vinha das 
 "O Império do Mali foi fundado por Sundiata Keita por volta de 1235. Os griôs, contadores de histórias, guardavam a memória do império de forma oral.",
 "As casas de barro (adobe) mantêm o interior fresco no calor, mas precisam de reparos depois das chuvas. Por isso a comunidade construía junta.",
 "“Mansa” significa “rei” ou “imperador” na língua mandinga. Musa era o décimo rei do Mali.",
-"O sal era muito valioso no Sudão Ocidental: o corpo precisa dele e quase não havia sal no sul. Por isso era trocado por ouro."];
-const FATO_OBRA=[9,2,0,2,4,3,11];
+"O sal era muito valioso no Sudão Ocidental: o corpo precisa dele e quase não havia sal no sul. Por isso era trocado por ouro.",
+"Cidades como Timbuktu e Djenné tinham ruas estreitas de terra batida entre casas de adobe. As ruas ligavam mercados, mesquitas e moradias, e por elas passavam comerciantes e caravanas."];
+const FATO_OBRA=[9,2,0,2,4,3,11,12];
 const $=id=>document.getElementById(id);
 const cv=$("cv"),ctx=cv.getContext("2d");
-const WW=740,WH=470,SX=370,SY=80;
+const WW=1060,WH=630;
 let grid,nasceu,qtd,ouro,comida,agua,pop,ano,ticks,acc,tempo,anim=0,estado=0,sel=-1,hx=-1,hy=-1,pausado=false,bannerT=0,toastT=0,fatoT=0,fatoIdx=8,pessoas=[];
-let sc=1,offX=0,offY=0,cssW=0,cssH=0;
+let sc=1,cssW=0,cssH=0,zoom=1.8,camX=0,camY=250;
 
-function rio(x,y){return y==0||(y==1&&x>=6)}
+function rio(x,y){return y==0||(y==1&&x>=9)}
+const via=(x,y)=>x>=0&&y>=0&&x<N&&y<N&&grid[x][y]==7;
 function livre(x,y){return x>=0&&y>=0&&x<N&&y<N&&!rio(x,y)&&grid[x][y]<0}
-const total=()=>qtd.reduce((a,b)=>a+b,0),cap=()=>10+8*qtd[0],est=()=>120+100*qtd[6];
+const total=()=>qtd.slice(0,7).reduce((a,b)=>a+b,0),cap=()=>10+8*qtd[0],est=()=>120+100*qtd[6];
 function colocar(x,y,t){grid[x][y]=t;qtd[t]++}
 function reset(){
- grid=Array.from({length:N},()=>Array(N).fill(-1));nasceu=Array.from({length:N},()=>Array(N).fill(-10));qtd=Array(7).fill(0);
- colocar(4,3,0);colocar(5,4,1);colocar(3,4,3);
+ grid=Array.from({length:N},()=>Array(N).fill(-1));nasceu=Array.from({length:N},()=>Array(N).fill(-10));qtd=Array(8).fill(0);zoom=1.8;camX=0;camY=250;
+ colocar(6,5,0);colocar(7,6,1);colocar(5,6,3);[[6,6],[6,7],[5,7],[7,7],[6,8]].forEach(p=>colocar(p[0],p[1],7));
  ouro=150;comida=50;agua=50;pop=12;ano=AI;ticks=0;acc=0;tempo=0;pausado=false;sel=-1;pessoas=[];
  $("bp").textContent="Pausar";hideB();hideT();setFato(8);estado=1;$("ov").style.display="none";
 }
@@ -103,7 +107,7 @@ function construir(x,y){
  if(rio(x,y))return aviso("O rio Níger não pode receber construções.");
  if(grid[x][y]>=0)return aviso("Já existe uma construção aqui.");
  if(ouro<CUSTO[sel])return aviso("Ouro insuficiente!");
- ouro-=CUSTO[sel];colocar(x,y,sel);nasceu[x][y]=anim;setFato(FATO_OBRA[sel]);
+ ouro-=CUSTO[sel];colocar(x,y,sel);nasceu[x][y]=anim;if(sel!=7)setFato(FATO_OBRA[sel]);
 }
 function tick(){
  ticks++;
@@ -126,17 +130,17 @@ function evento(){
   default:{const a=Math.min(5,cap()-pop);if(a>0){pop+=a;anuncio("Crescimento populacional! +"+a+" moradores chegaram.")}else anuncio("Famílias querem chegar, mas faltam casas!")}
  }
 }
-function repos(w){for(let i=0;i<300;i++){const x=Math.floor(Math.random()*N),y=Math.floor(Math.random()*N);if(livre(x,y)){w.x=w.tx=x;w.y=w.ty=y;return}}}
+function repos(w){for(let i=0;i<300;i++){const x=Math.floor(Math.random()*N),y=Math.floor(Math.random()*N);if(via(x,y)){w.x=w.tx=x;w.y=w.ty=y;return}}}
 function moverP(dt){
- const q=Math.min(12,2+Math.floor(pop/4)),cs=["#2850a0","#f0ebdc","#c87828","#963232","#3c825a"];
+ const q=qtd[7]>1?Math.min(14,2+Math.floor(pop/4)):0,cs=["#2850a0","#f0ebdc","#c87828","#963232","#3c825a"];
  while(pessoas.length<q){const w={x:0,y:0,tx:0,ty:0,ph:Math.random()*6,c:cs[Math.floor(Math.random()*5)]};repos(w);pessoas.push(w)}
  while(pessoas.length>q)pessoas.pop();
  const D=[[1,0],[-1,0],[0,1],[0,-1]];
  for(const w of pessoas){
-  if(!livre(Math.round(w.x),Math.round(w.y)))repos(w);
-  if(!livre(w.tx,w.ty)){w.tx=Math.round(w.x);w.ty=Math.round(w.y)}
+  if(!via(Math.round(w.x),Math.round(w.y)))repos(w);
+  if(!via(w.tx,w.ty)){w.tx=Math.round(w.x);w.ty=Math.round(w.y)}
   const dx=w.tx-w.x,dy=w.ty-w.y,d=Math.hypot(dx,dy),st=dt*.8;
-  if(d<=st){w.x=w.tx;w.y=w.ty;const s=Math.floor(Math.random()*4);for(let i=0;i<4;i++){const dd=D[(s+i)%4];if(livre(w.tx+dd[0],w.ty+dd[1])){w.tx+=dd[0];w.ty+=dd[1];break}}}
+  if(d<=st){w.x=w.tx;w.y=w.ty;const s=Math.floor(Math.random()*4);for(let i=0;i<4;i++){const dd=D[(s+i)%4];if(via(w.tx+dd[0],w.ty+dd[1])){w.tx+=dd[0];w.ty+=dd[1];break}}}
   else{w.x+=dx/d*st;w.y+=dy/d*st}
  }
 }
@@ -214,6 +218,11 @@ function palmeira(cx,cy,seed){
  ctx.strokeStyle="#328c3c";ctx.lineWidth=3;
  for(let i=0;i<7;i++){const a=i*Math.PI*2/7+sw*.03;ctx.beginPath();ctx.moveTo(tx,ty);ctx.quadraticCurveTo(tx+Math.cos(a)*12,ty-9+Math.sin(a)*3,tx+Math.cos(a)*22,ty+4+Math.sin(a)*7);ctx.stroke()}
 }
+function road(gx,gy,cx,cy){
+ const D=[[1,0,20,10],[-1,0,-20,-10],[0,1,-20,10],[0,-1,20,-10]],c="#b48c58";
+ ctx.lineCap="butt";dia(cx,cy,24,12,c);
+ for(const d of D)if(via(gx+d[0],gy+d[1]))ln(cx,cy,cx+d[2],cy+d[3],c,16);
+}
 function tile(gx,gy,cx,cy){
  if(rio(gx,gy)){dia(cx,cy,TW/2,TH/2,"#4090c4");ctx.strokeStyle="rgba(150,210,240,.8)";ctx.lineWidth=2;
   for(let i=0;i<2;i++){const f=(anim*.5+i*.5+gx*.13)%1,x=cx-24+f*40,y=cy-4+i*8;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+10,y);ctx.stroke()}return}
@@ -222,6 +231,7 @@ function tile(gx,gy,cx,cy){
  const g=gy<=2?(((gx+gy)%2)?"#4f9a46":"#7cb84e"):"#a8a458";
  ctx.globalAlpha=gy<=2?.5:gy<=3?.32:.18;dia(cx,cy,TW/2,TH/2,g);ctx.globalAlpha=1;
  ctx.strokeStyle="rgba(190,154,100,.4)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-20);ctx.lineTo(cx+40,cy);ctx.lineTo(cx,cy+20);ctx.lineTo(cx-40,cy);ctx.closePath();ctx.stroke();
+ if(grid[gx][gy]==7)road(gx,gy,cx,cy);
 }
 function canoa(cx,cy){oval(cx,cy+2,16,4.5,"rgba(0,0,0,.16)");oval(cx,cy-1,16,4.5,"#784e28");oval(cx,cy-2,11,2.5,"#3c2814");
  ctx.fillStyle="#f0ebdc";ctx.fillRect(cx-3,cy-16,7,11);oval(cx+1,cy-19,3,3,"#6e462d")}
@@ -232,10 +242,10 @@ function pessoa(w){
 function draw(){
  const dpr=devicePixelRatio||1,r=cv.getBoundingClientRect();
  if(cv.width!=Math.round(r.width*dpr)||cv.height!=Math.round(r.height*dpr)){cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr)}
- cssW=r.width;cssH=r.height;sc=Math.min(cssW/WW,cssH/WH);offX=(cssW-WW*sc)/2;offY=(cssH-WH*sc)/2;
+ cssW=r.width;cssH=r.height;sc=Math.min(cssW/WW,cssH/WH)*zoom;
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
  ctx.fillStyle="rgba(255,240,190,.6)";ctx.beginPath();ctx.arc(cssW*.85,cssH*.12,22,0,7);ctx.fill();
- ctx.translate(offX,offY);ctx.scale(sc,sc);ctx.translate(SX,SY);
+ ctx.translate(cssW/2,cssH/2);ctx.scale(sc,sc);ctx.translate(-camX,-camY);
  const MY=N*TH/2,B=N*TH,L=-N*TW/2,R=N*TW/2;
  poly([[L,MY],[0,B],[0,B+16],[L,MY+16]],"#8c6238");poly([[R,MY],[0,B],[0,B+16],[R,MY+16]],"#704c2c");
  const cn=Math.floor((anim*.35)%N);
@@ -243,16 +253,16 @@ function draw(){
   const cx=(gx-gy)*TW/2,cy=TH/2+(gx+gy)*TH/2;tile(gx,gy,cx,cy);
   if(gy==0&&gx==cn)canoa(cx,cy);
   const t=grid[gx][gy];
-  if(t>=0)obra(t,cx,cy,Math.min(1,(anim-nasceu[gx][gy])/.6),gx+gy);
+  if(t>=0&&t<7)obra(t,cx,cy,Math.min(1,(anim-nasceu[gx][gy])/.6),gx+gy);
   else if(livre(gx,gy)){const h=(gx*31+gy*17+gx*gy)%9;if(h==0)palmeira(cx,cy+4,gx);else if(h==4){oval(cx-1,cy-2,7,4.5,"#6e8c46");oval(cx+4,cy-4,6,4,"#82a550")}}
   if(estado==1&&sel>=0&&gx==hx&&gy==hy){
    const ok=livre(gx,gy)&&ouro>=CUSTO[sel];
-   if(grid[gx][gy]<0&&!rio(gx,gy)){ctx.globalAlpha=.6;obra(sel,cx,cy,1,gx+gy);ctx.globalAlpha=1}
+   if(sel<7&&grid[gx][gy]<0&&!rio(gx,gy)){ctx.globalAlpha=.6;obra(sel,cx,cy,1,gx+gy);ctx.globalAlpha=1}
    dia(cx,cy,40,20,ok?"rgba(80,220,80,.45)":"rgba(230,60,60,.5)");
   }
   for(const w of pessoas)if(Math.round(w.x)==gx&&Math.round(w.y)==gy)pessoa(w);
  }
- if(pausado&&estado==1){ctx.font="bold 46px Georgia,serif";ctx.fillStyle="rgba(60,35,15,.8)";ctx.textAlign="center";ctx.fillText("PAUSADO",0,150)}
+ if(pausado&&estado==1){ctx.font="bold 46px Georgia,serif";ctx.fillStyle="rgba(60,35,15,.8)";ctx.textAlign="center";ctx.fillText("PAUSADO",camX,camY)}
 }
 
 // ===== interface =====
@@ -278,19 +288,33 @@ $("br").onclick=reset;
 $("bp").onclick=()=>{if(estado==1){pausado=!pausado;$("bp").textContent=pausado?"Continuar":"Pausar"}};
 
 function pick(e){
- const r=cv.getBoundingClientRect(),px=(e.clientX-r.left-offX)/sc-SX,py=(e.clientY-r.top-offY)/sc-SY;
+ const r=cv.getBoundingClientRect(),px=(e.clientX-r.left-cssW/2)/sc+camX,py=(e.clientY-r.top-cssH/2)/sc+camY;
  const u=px/(TW/2),v=(py-TH/2)/(TH/2),gx=Math.round((u+v)/2),gy=Math.round((v-u)/2);
  return gx>=0&&gy>=0&&gx<N&&gy<N?[gx,gy]:null;
 }
-let down=false;
-cv.addEventListener("pointerdown",e=>{if(estado!=1||pausado)return;down=true;cv.setPointerCapture(e.pointerId);const p=pick(e);[hx,hy]=p||[-1,-1]});
-cv.addEventListener("pointermove",e=>{if(estado!=1)return;if(down||e.pointerType=="mouse"){const p=pick(e);[hx,hy]=p||[-1,-1]}});
-cv.addEventListener("pointerup",e=>{if(!down)return;down=false;const p=pick(e);if(p&&estado==1&&!pausado){if(sel<0)aviso("Escolha uma construção abaixo primeiro!");else construir(p[0],p[1])}if(e.pointerType!="mouse"){hx=hy=-1}});
-cv.addEventListener("pointercancel",()=>{down=false;hx=hy=-1});
+const ptr=new Map();let mode="",pd0=1,pz0=1,pm={x:0,y:0},last={x:0,y:0},mv=0;
+const clampCam=()=>{zoom=Math.max(.7,Math.min(3.5,zoom));camX=Math.max(-N*TW/2,Math.min(N*TW/2,camX));camY=Math.max(0,Math.min(N*TH+16,camY))};
+cv.addEventListener("pointerdown",e=>{if(estado!=1)return;cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(ptr.size==2){const[a,b]=[...ptr.values()];mode="pinch";pd0=Math.hypot(a.x-b.x,a.y-b.y)||1;pz0=zoom;pm={x:(a.x+b.x)/2,y:(a.y+b.y)/2};hx=hy=-1;return}
+ if(ptr.size>2)return;
+ last={x:e.clientX,y:e.clientY};mv=0;mode=(sel<0||pausado)?"pan":"build";
+ if(mode=="build"){const p=pick(e);[hx,hy]=p||[-1,-1]}});
+cv.addEventListener("pointermove",e=>{if(estado!=1)return;
+ if(ptr.has(e.pointerId))ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(mode=="pinch"&&ptr.size==2){const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};camX-=(m.x-pm.x)/sc;camY-=(m.y-pm.y)/sc;pm=m;zoom=pz0*d/pd0;clampCam();return}
+ if(mode=="pan"&&ptr.size==1){const dx=e.clientX-last.x,dy=e.clientY-last.y;mv+=Math.abs(dx)+Math.abs(dy);camX-=dx/sc;camY-=dy/sc;last={x:e.clientX,y:e.clientY};clampCam();return}
+ if(mode=="build"||(e.pointerType=="mouse"&&!ptr.size)){const p=pick(e);[hx,hy]=p||[-1,-1];if(mode=="build"&&sel==7&&p&&livre(p[0],p[1]))construir(p[0],p[1])}});
+cv.addEventListener("pointerup",e=>{ptr.delete(e.pointerId);
+ if(mode=="build"&&ptr.size==0&&estado==1&&!pausado){const p=pick(e);if(p&&(sel!=7||livre(p[0],p[1])))construir(p[0],p[1])}
+ if(mode=="pan"&&ptr.size==0&&mv<8&&!pausado&&estado==1)aviso("Escolha uma construção abaixo primeiro!");
+ if(ptr.size==0){mode="";if(e.pointerType!="mouse")hx=hy=-1}});
+cv.addEventListener("pointercancel",e=>{ptr.delete(e.pointerId);if(!ptr.size){mode="";hx=hy=-1}});
+cv.addEventListener("wheel",e=>{e.preventDefault();zoom*=Math.exp(-e.deltaY*.0015);clampCam()},{passive:false});
+$("zi").onclick=()=>{zoom*=1.25;clampCam()};$("zo").onclick=()=>{zoom/=1.25;clampCam()};
 document.addEventListener("contextmenu",e=>e.preventDefault());
 
 reset();estado=0;
-overlay("Império do Mali",["Ano de 1312. Você governa uma pequena aldeia no reinado de Mansa Musa.","COMO JOGAR: escolha uma construção na barra de baixo e toque no mapa (ou arraste para ajustar e solte para construir).","META: 50 habitantes, 5 construções e comida e água sobrando.","Cuidado com a seca! Construa fazendas e poços."],"JOGAR");
+overlay("Império do Mali",["Ano de 1312. Você governa uma pequena aldeia no reinado de Mansa Musa.","COMO JOGAR: escolha uma construção na barra de baixo e toque no mapa (arraste para ajustar e solte para construir). A Rua pode ser arrastada para desenhar caminhos: as pessoas só andam por elas! Sem construção escolhida, arraste para mover o mapa. Use dois dedos (pinça) ou os botões + e − para dar zoom.","META: 50 habitantes, 5 construções e comida e água sobrando.","Cuidado com a seca! Construa fazendas e poços."],"JOGAR");
 let last=performance.now();
 (function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;update(dt);draw();hud();requestAnimationFrame(loop)})(last);
 </script>
