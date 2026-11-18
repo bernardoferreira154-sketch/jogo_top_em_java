@@ -64,7 +64,7 @@ canvas{width:100%;height:100%;display:block;touch-action:none}
 <script>
 const N=13,TW=80,TH=40,TICKS_ANO=10,AI=1312,AF=1337;
 const NOME=["Casa","Fazenda","Mercado","Poço","Mesquita","Escola","Armazém","Rua"];
-const DESC=["+8 moradores","produz comida","gera ouro","fornece água","+ouro · cultura","+ouro · saber","+estoque","pessoas andam aqui"];
+const DESC=["+8 moradores","produz comida","gera ouro","fornece água","+ouro · cultura","+ouro · saber","+estoque","liga as obras"];
 const CUSTO=[30,40,60,30,80,80,50,5];
 const COR=["#c48c58","#6eaa46","#c84632","#4696c8","#deba80","#3c6eaa","#be963c","#b48c58"];
 const FATOS=["O Mali enriqueceu com o comércio de ouro e sal: o ouro vinha das regiões do sul e o sal, do deserto do Saara. As caravanas cruzavam o deserto em rotas comerciais.",
@@ -89,6 +89,7 @@ let sc=1,cssW=0,cssH=0,zoom=1.8,camX=0,camY=250;
 
 function rio(x,y){return y==0||(y==1&&x>=9)}
 const via=(x,y)=>x>=0&&y>=0&&x<N&&y<N&&grid[x][y]==7;
+const perto=(x,y)=>via(x+1,y)||via(x-1,y)||via(x,y+1)||via(x,y-1);
 function livre(x,y){return x>=0&&y>=0&&x<N&&y<N&&!rio(x,y)&&grid[x][y]<0}
 const total=()=>qtd.slice(0,7).reduce((a,b)=>a+b,0),cap=()=>10+8*qtd[0],est=()=>120+100*qtd[6];
 function colocar(x,y,t){grid[x][y]=t;qtd[t]++}
@@ -106,6 +107,7 @@ function construir(x,y){
  if(sel<0)return;
  if(rio(x,y))return aviso("O rio Níger não pode receber construções.");
  if(grid[x][y]>=0)return aviso("Já existe uma construção aqui.");
+ if(sel<7&&!perto(x,y))return aviso("Construa ao lado de uma rua!");
  if(ouro<CUSTO[sel])return aviso("Ouro insuficiente!");
  ouro-=CUSTO[sel];colocar(x,y,sel);nasceu[x][y]=anim;if(sel!=7)setFato(FATO_OBRA[sel]);
 }
@@ -232,6 +234,7 @@ function tile(gx,gy,cx,cy){
  ctx.globalAlpha=gy<=2?.5:gy<=3?.32:.18;dia(cx,cy,TW/2,TH/2,g);ctx.globalAlpha=1;
  ctx.strokeStyle="rgba(190,154,100,.4)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-20);ctx.lineTo(cx+40,cy);ctx.lineTo(cx,cy+20);ctx.lineTo(cx-40,cy);ctx.closePath();ctx.stroke();
  if(grid[gx][gy]==7)road(gx,gy,cx,cy);
+ else if(estado==1&&sel>=0&&sel<7&&livre(gx,gy)&&perto(gx,gy))dia(cx,cy,34,17,"rgba(110,220,90,.3)");
 }
 function canoa(cx,cy){oval(cx,cy+2,16,4.5,"rgba(0,0,0,.16)");oval(cx,cy-1,16,4.5,"#784e28");oval(cx,cy-2,11,2.5,"#3c2814");
  ctx.fillStyle="#f0ebdc";ctx.fillRect(cx-3,cy-16,7,11);oval(cx+1,cy-19,3,3,"#6e462d")}
@@ -256,7 +259,7 @@ function draw(){
   if(t>=0&&t<7)obra(t,cx,cy,Math.min(1,(anim-nasceu[gx][gy])/.6),gx+gy);
   else if(livre(gx,gy)){const h=(gx*31+gy*17+gx*gy)%9;if(h==0)palmeira(cx,cy+4,gx);else if(h==4){oval(cx-1,cy-2,7,4.5,"#6e8c46");oval(cx+4,cy-4,6,4,"#82a550")}}
   if(estado==1&&sel>=0&&gx==hx&&gy==hy){
-   const ok=livre(gx,gy)&&ouro>=CUSTO[sel];
+   const ok=livre(gx,gy)&&ouro>=CUSTO[sel]&&(sel==7||perto(gx,gy));
    if(sel<7&&grid[gx][gy]<0&&!rio(gx,gy)){ctx.globalAlpha=.6;obra(sel,cx,cy,1,gx+gy);ctx.globalAlpha=1}
    dia(cx,cy,40,20,ok?"rgba(80,220,80,.45)":"rgba(230,60,60,.5)");
   }
@@ -292,17 +295,17 @@ function pick(e){
  const u=px/(TW/2),v=(py-TH/2)/(TH/2),gx=Math.round((u+v)/2),gy=Math.round((v-u)/2);
  return gx>=0&&gy>=0&&gx<N&&gy<N?[gx,gy]:null;
 }
-const ptr=new Map();let mode="",pd0=1,pz0=1,pm={x:0,y:0},last={x:0,y:0},mv=0;
+const ptr=new Map();let mode="",pd0=1,pz0=1,pm={x:0,y:0},lp={x:0,y:0},mv=0;
 const clampCam=()=>{zoom=Math.max(.7,Math.min(3.5,zoom));camX=Math.max(-N*TW/2,Math.min(N*TW/2,camX));camY=Math.max(0,Math.min(N*TH+16,camY))};
 cv.addEventListener("pointerdown",e=>{if(estado!=1)return;cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(ptr.size==2){const[a,b]=[...ptr.values()];mode="pinch";pd0=Math.hypot(a.x-b.x,a.y-b.y)||1;pz0=zoom;pm={x:(a.x+b.x)/2,y:(a.y+b.y)/2};hx=hy=-1;return}
  if(ptr.size>2)return;
- last={x:e.clientX,y:e.clientY};mv=0;mode=(sel<0||pausado)?"pan":"build";
+ lp={x:e.clientX,y:e.clientY};mv=0;mode=(sel<0||pausado)?"pan":"build";
  if(mode=="build"){const p=pick(e);[hx,hy]=p||[-1,-1]}});
 cv.addEventListener("pointermove",e=>{if(estado!=1)return;
  if(ptr.has(e.pointerId))ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(mode=="pinch"&&ptr.size==2){const[a,b]=[...ptr.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};camX-=(m.x-pm.x)/sc;camY-=(m.y-pm.y)/sc;pm=m;zoom=pz0*d/pd0;clampCam();return}
- if(mode=="pan"&&ptr.size==1){const dx=e.clientX-last.x,dy=e.clientY-last.y;mv+=Math.abs(dx)+Math.abs(dy);camX-=dx/sc;camY-=dy/sc;last={x:e.clientX,y:e.clientY};clampCam();return}
+ if(mode=="pan"&&ptr.size==1){const dx=e.clientX-lp.x,dy=e.clientY-lp.y;mv+=Math.abs(dx)+Math.abs(dy);camX-=dx/sc;camY-=dy/sc;lp={x:e.clientX,y:e.clientY};clampCam();return}
  if(mode=="build"||(e.pointerType=="mouse"&&!ptr.size)){const p=pick(e);[hx,hy]=p||[-1,-1];if(mode=="build"&&sel==7&&p&&livre(p[0],p[1]))construir(p[0],p[1])}});
 cv.addEventListener("pointerup",e=>{ptr.delete(e.pointerId);
  if(mode=="build"&&ptr.size==0&&estado==1&&!pausado){const p=pick(e);if(p&&(sel!=7||livre(p[0],p[1])))construir(p[0],p[1])}
@@ -314,7 +317,7 @@ $("zi").onclick=()=>{zoom*=1.25;clampCam()};$("zo").onclick=()=>{zoom/=1.25;clam
 document.addEventListener("contextmenu",e=>e.preventDefault());
 
 reset();estado=0;
-overlay("Império do Mali",["Ano de 1312. Você governa uma pequena aldeia no reinado de Mansa Musa.","COMO JOGAR: escolha uma construção na barra de baixo e toque no mapa (arraste para ajustar e solte para construir). A Rua pode ser arrastada para desenhar caminhos: as pessoas só andam por elas! Sem construção escolhida, arraste para mover o mapa. Use dois dedos (pinça) ou os botões + e − para dar zoom.","META: 50 habitantes, 5 construções e comida e água sobrando.","Cuidado com a seca! Construa fazendas e poços."],"JOGAR");
+overlay("Império do Mali",["Ano de 1312. Você governa uma pequena aldeia no reinado de Mansa Musa.","COMO JOGAR: primeiro desenhe RUAS (arraste o dedo no mapa com a Rua escolhida). Construções só podem ser feitas ao lado de uma rua, e as pessoas só andam por elas. Sem nada escolhido, arraste para mover o mapa; use a pinça ou os botões + e − para o zoom.","META: 50 habitantes, 5 construções e comida e água sobrando.","Cuidado com a seca! Construa fazendas e poços."],"JOGAR");
 let last=performance.now();
 (function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;update(dt);draw();hud();requestAnimationFrame(loop)})(last);
 </script>
