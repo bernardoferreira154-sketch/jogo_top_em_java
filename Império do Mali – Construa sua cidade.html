@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Império do Mali – Construa sua cidade</title>
+<style>
+:root{--bg:#28190f;--mar:#4a2e18;--cre:#f4e4be;--our:#f0be28;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+#app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
+#hud{background:linear-gradient(#6e4624,var(--mar));padding:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px;border-bottom:3px solid #281908}
+.chip{background:#3a2412;border:2px solid #281908;border-radius:10px;padding:3px 6px;line-height:1.1;min-width:0}
+.chip small{display:block;font-size:10px;color:#e6d2aa}
+.chip b{font-size:16px}.chip span{font-size:10px;color:#c8b48c}
+.chip.al{border-color:#e63c28}
+#bar{display:flex;gap:5px;padding:5px 6px;background:var(--mar)}
+#bar .chip{flex:1.3}
+.btn{border:2px solid #281908;border-radius:10px;color:#fff;font-weight:700;font-size:13px;padding:0 10px;background:#3c7850;flex:1;min-height:40px}
+.btn.r{background:#a04632}
+#obj{font-size:11px;color:var(--cre);background:#4a2e18e6;padding:3px 8px;display:flex;justify-content:space-between;gap:4px}
+#obj i{font-style:normal}#obj i.ok{color:#7be07b}
+#stage{flex:1;position:relative;min-height:0;background:linear-gradient(#f6e2b0,#d6b076)}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+#msg{position:absolute;left:0;right:0;top:6px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+#msg div{padding:6px 12px;border-radius:10px;border:2px solid #281908;font-size:13px;font-weight:700;max-width:92%;text-align:center}
+#ban{background:#ffecaa;color:var(--mar)}#toast{background:#aa3c28;color:#fff}
+#pal{display:flex;gap:6px;overflow-x:auto;padding:8px 6px 4px;background:var(--mar);scrollbar-width:none}
+.b{flex:0 0 96px;background:var(--cre);color:var(--mar);border:2px solid #281908;border-radius:12px;padding:5px 6px;text-align:left;font:inherit;min-height:62px;position:relative}
+.b strong{display:block;font-size:14px}.b em{font-style:normal;font-size:12px;font-weight:700;color:#966e00}
+.b.no em{color:#be3228}.b small{display:block;font-size:10px;color:#645032;margin-top:1px}
+.b.sel{outline:4px solid var(--our);transform:translateY(-4px)}
+.b i{position:absolute;right:6px;top:6px;width:14px;height:14px;border-radius:4px;border:1px solid #3c2814}
+#fact{background:var(--mar);padding:4px 10px 8px;font-size:12px;line-height:1.3;color:var(--cre);min-height:62px}
+#fact b{color:var(--our);font-size:10px;display:block}
+#ov{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+#box{background:var(--cre);color:#46281a;border:3px solid #281908;border-radius:16px;padding:20px;max-width:420px;width:100%;text-align:center;max-height:92%;overflow:auto}
+#box h1{margin:0 0 10px;font:700 28px Georgia,serif;color:var(--mar)}
+#box p{margin:8px 0;font-size:15px;line-height:1.35}
+#box .btn{width:100%;margin-top:10px;min-height:50px;font-size:16px}
+</style>
+</head>
+<body>
+<div id="app">
+ <div id="hud">
+  <div class="chip" id="cO"><small>Ouro</small><b></b><span></span></div>
+  <div class="chip" id="cC"><small>Alimentos</small><b></b><span></span></div>
+  <div class="chip" id="cA"><small>Água</small><b></b><span></span></div>
+  <div class="chip" id="cP"><small>População</small><b></b><span></span></div>
+ </div>
+ <div id="bar">
+  <div class="chip"><small>Ano</small><b id="ano"></b></div>
+  <button class="btn" id="bp">Pausar</button>
+  <button class="btn r" id="br">Reiniciar</button>
+ </div>
+ <div id="obj"></div>
+ <div id="stage"><canvas id="cv"></canvas><div id="msg"><div id="ban" hidden></div><div id="toast" hidden></div></div></div>
+ <div id="pal"></div>
+ <div id="fact"><b>VOCÊ SABIA?</b><span id="ft"></span></div>
+</div>
+<div id="ov"><div id="box"><h1></h1><div id="ol"></div><button class="btn" id="ob"></button></div></div>
+<script>
+const N=9,TW=80,TH=40,TICKS_ANO=10,AI=1312,AF=1337;
+const NOME=["Casa","Fazenda","Mercado","Poço","Mesquita","Escola","Armazém"];
+const DESC=["+8 moradores","produz comida","gera ouro","fornece água","+ouro · cultura","+ouro · saber","+estoque"];
+const CUSTO=[30,40,60,30,80,80,50];
+const COR=["#c48c58","#6eaa46","#c84632","#4696c8","#deba80","#3c6eaa","#be963c"];
+const FATOS=["O Mali enriqueceu com o comércio de ouro e sal: o ouro vinha das regiões do sul e o sal, do deserto do Saara. As caravanas cruzavam o deserto em rotas comerciais.",
+"Mansa Musa ficou famoso por sua riqueza e pela peregrinação a Meca em 1324. Ele distribuiu tanto ouro no Cairo que o valor do metal caiu por anos.",
+"O rio Níger foi essencial para o Mali: irrigava plantações de painço e arroz e servia de estrada para canoas de comércio e pesca.",
+"Timbuktu tornou-se um importante centro de conhecimento, com a Universidade de Sankoré, estudiosos e grandes coleções de manuscritos.",
+"A Mesquita de Djinguereber, em Timbuktu, foi construída com a ajuda do arquiteto Abu Ishaq al-Sahili, trazido por Mansa Musa depois de sua peregrinação.",
+"Escravidão: no Mali, como em muitos reinos da época, pessoas eram escravizadas e vendidas nas rotas do Saara. Parte da riqueza do período veio dessa injustiça.",
+"Desigualdade: enquanto a corte vivia com enorme luxo, a maior parte da população era formada por camponeses, pescadores e artesãos que pagavam tributos.",
+"Conflitos: o império cresceu conquistando e cobrando tributos de povos vizinhos, e as disputas pelo poder eram comuns entre as famílias governantes.",
+"O Império do Mali foi fundado por Sundiata Keita por volta de 1235. Os griôs, contadores de histórias, guardavam a memória do império de forma oral.",
+"As casas de barro (adobe) mantêm o interior fresco no calor, mas precisam de reparos depois das chuvas. Por isso a comunidade construía junta.",
+"“Mansa” significa “rei” ou “imperador” na língua mandinga. Musa era o décimo rei do Mali.",
+"O sal era muito valioso no Sudão Ocidental: o corpo precisa dele e quase não havia sal no sul. Por isso era trocado por ouro."];
+const FATO_OBRA=[9,2,0,2,4,3,11];
+const $=id=>document.getElementById(id);
+const cv=$("cv"),ctx=cv.getContext("2d");
+const WW=740,WH=470,SX=370,SY=80;
+let grid,nasceu,qtd,ouro,comida,agua,pop,ano,ticks,acc,tempo,anim=0,estado=0,sel=-1,hx=-1,hy=-1,pausado=false,bannerT=0,toastT=0,fatoT=0,fatoIdx=8,pessoas=[];
+let sc=1,offX=0,offY=0,cssW=0,cssH=0;
+
+function rio(x,y){return y==0||(y==1&&x>=6)}
+function livre(x,y){return x>=0&&y>=0&&x<N&&y<N&&!rio(x,y)&&grid[x][y]<0}
+const total=()=>qtd.reduce((a,b)=>a+b,0),cap=()=>10+8*qtd[0],est=()=>120+100*qtd[6];
+function colocar(x,y,t){grid[x][y]=t;qtd[t]++}
+function reset(){
+ grid=Array.from({length:N},()=>Array(N).fill(-1));nasceu=Array.from({length:N},()=>Array(N).fill(-10));qtd=Array(7).fill(0);
+ colocar(4,3,0);colocar(5,4,1);colocar(3,4,3);
+ ouro=150;comida=50;agua=50;pop=12;ano=AI;ticks=0;acc=0;tempo=0;pausado=false;sel=-1;pessoas=[];
+ $("bp").textContent="Pausar";hideB();hideT();setFato(8);estado=1;$("ov").style.display="none";
+}
+function aviso(s){const t=$("toast");t.textContent=s;t.hidden=false;toastT=2.5}
+function anuncio(s){const t=$("ban");t.textContent=ano+": "+s;t.hidden=false;bannerT=5}
+function hideB(){$("ban").hidden=true;bannerT=0}function hideT(){$("toast").hidden=true;toastT=0}
+function setFato(i){fatoIdx=i;fatoT=14;$("ft").textContent=FATOS[i]}
+function construir(x,y){
+ if(sel<0)return;
+ if(rio(x,y))return aviso("O rio Níger não pode receber construções.");
+ if(grid[x][y]>=0)return aviso("Já existe uma construção aqui.");
+ if(ouro<CUSTO[sel])return aviso("Ouro insuficiente!");
+ ouro-=CUSTO[sel];colocar(x,y,sel);nasceu[x][y]=anim;setFato(FATO_OBRA[sel]);
+}
+function tick(){
+ ticks++;
+ ouro+=qtd[2]*3+qtd[4]*2+qtd[5]*2+pop*.15;comida+=qtd[1]*2-pop*.05;agua+=qtd[3]*2-pop*.05;
+ ouro=Math.min(est(),ouro);comida=Math.max(0,Math.min(est(),comida));agua=Math.max(0,Math.min(est(),agua));
+ if(ticks%4==0&&pop<cap()&&comida>3&&agua>3)pop++;
+ if((comida<=0||agua<=0)&&ticks%3==0&&pop>1){pop--;aviso("Falta comida ou água! Moradores estão partindo.")}
+ else if(ticks%5==0&&comida<8)aviso("Poucos alimentos! Construa fazendas.");
+ else if(ticks%5==0&&agua<8)aviso("Pouca água! Construa poços.");
+ if(ticks%TICKS_ANO==0){ano++;evento()}
+ if(pop>=50&&total()>=5&&comida>0&&agua>0){estado=2;fim()}else if(ano>AF){estado=3;fim()}
+}
+function evento(){
+ if(ano==1324){anuncio("Mansa Musa parte em peregrinação a Meca com uma enorme caravana de ouro!");setFato(1);return}
+ if(Math.random()*100>=55)return;
+ switch(Math.floor(Math.random()*4)){
+  case 0:{const a=25+qtd[1]*15;comida=Math.min(est(),comida+a);anuncio("Boa colheita! +"+a+" alimentos.");break}
+  case 1:{const a=40+qtd[2]*20;ouro=Math.min(est(),ouro+a);anuncio("Chegada de comerciantes! +"+a+" ouro.");setFato(0);break}
+  case 2:agua=Math.max(0,agua-20);anuncio("Seca! A água diminuiu. Poços ajudam muito.");break;
+  default:{const a=Math.min(5,cap()-pop);if(a>0){pop+=a;anuncio("Crescimento populacional! +"+a+" moradores chegaram.")}else anuncio("Famílias querem chegar, mas faltam casas!")}
+ }
+}
+function repos(w){for(let i=0;i<300;i++){const x=Math.floor(Math.random()*N),y=Math.floor(Math.random()*N);if(livre(x,y)){w.x=w.tx=x;w.y=w.ty=y;return}}}
+function moverP(dt){
+ const q=Math.min(12,2+Math.floor(pop/4)),cs=["#2850a0","#f0ebdc","#c87828","#963232","#3c825a"];
+ while(pessoas.length<q){const w={x:0,y:0,tx:0,ty:0,ph:Math.random()*6,c:cs[Math.floor(Math.random()*5)]};repos(w);pessoas.push(w)}
+ while(pessoas.length>q)pessoas.pop();
+ const D=[[1,0],[-1,0],[0,1],[0,-1]];
+ for(const w of pessoas){
+  if(!livre(Math.round(w.x),Math.round(w.y)))repos(w);
+  if(!livre(w.tx,w.ty)){w.tx=Math.round(w.x);w.ty=Math.round(w.y)}
+  const dx=w.tx-w.x,dy=w.ty-w.y,d=Math.hypot(dx,dy),st=dt*.8;
+  if(d<=st){w.x=w.tx;w.y=w.ty;const s=Math.floor(Math.random()*4);for(let i=0;i<4;i++){const dd=D[(s+i)%4];if(livre(w.tx+dd[0],w.ty+dd[1])){w.tx+=dd[0];w.ty+=dd[1];break}}}
+  else{w.x+=dx/d*st;w.y+=dy/d*st}
+ }
+}
+function update(dt){
+ anim+=dt;if(estado!=1||pausado)return;
+ tempo+=dt;
+ if(bannerT>0&&(bannerT-=dt)<=0)$("ban").hidden=true;
+ if(toastT>0&&(toastT-=dt)<=0)$("toast").hidden=true;
+ if((fatoT-=dt)<=0)setFato(Math.floor(Math.random()*FATOS.length));
+ acc+=dt;while(acc>=1&&estado==1){acc-=1;tick()}
+ moverP(dt);
+}
+
+// ===== desenho =====
+const P=(c,a)=>{ctx.fillStyle=c;if(a!==undefined)ctx.globalAlpha=a};
+function poly(pts,c){ctx.fillStyle=c;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill()}
+function dia(cx,cy,hw,hh,c){poly([[cx,cy-hh],[cx+hw,cy],[cx,cy+hh],[cx-hw,cy]],c)}
+function sh(c,f){const n=parseInt(c.slice(1),16);return`rgb(${(n>>16)*f|0},${(n>>8&255)*f|0},${(n&255)*f|0})`}
+function oval(x,y,rx,ry,c){ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);ctx.fill()}
+function box(cx,cy,hw,hh,h,c){
+ poly([[cx-hw,cy],[cx,cy+hh],[cx,cy+hh-h],[cx-hw,cy-h]],sh(c,.82));
+ poly([[cx+hw,cy],[cx,cy+hh],[cx,cy+hh-h],[cx+hw,cy-h]],sh(c,.66));
+ poly([[cx,cy-hh-h],[cx+hw,cy-h],[cx,cy+hh-h],[cx-hw,cy-h]],c);
+}
+function cil(cx,cy,rx,ry,h,l,t){oval(cx,cy,rx,ry,sh(l,.8));ctx.fillStyle=l;ctx.fillRect(cx-rx,cy-h,2*rx,h);oval(cx,cy-h,rx,ry,t)}
+function ln(x1,y1,x2,y2,c,w){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function celeiro(cx,cy,rx,ry,h,cone){
+ cil(cx,cy,rx,ry,h,"#cea064","#dcb074");
+ oval(cx,cy-h-1,rx+3,ry+1,"#c49c40");poly([[cx-rx-3,cy-h],[cx+rx+3,cy-h],[cx,cy-h-cone]],"#c49c40");
+}
+function obra(t,cx,cy,k,v){
+ k=k*(2-k);
+ if(t!=1)oval(cx,cy+4,30,12,"rgba(0,0,0,.16)");
+ if([2,3,4,5,6].includes(t)){dia(cx,cy,36,18,["","","#b4764a","#a09078","#b09a78","#8a8a84","#8c6844"][t]);ctx.strokeStyle="rgba(60,40,20,.6)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy-18);ctx.lineTo(cx+36,cy);ctx.lineTo(cx,cy+18);ctx.lineTo(cx-36,cy);ctx.closePath();ctx.stroke()}
+ if(t==0){
+  const h=24*k;box(cx,cy,22,11,h,"#c68e5a");
+  if(v%2==0)box(cx,cy-h,12,6,14*k,"#ce9864");
+  poly([[cx+7,cy+4],[cx+14,cy+1],[cx+14,cy-9*k],[cx+7,cy-6*k]],"#46281a");
+ }else if(t==1){
+  dia(cx,cy,34,17,"#644828");
+  for(let i=0;i<5;i++){const v0=.1+i*.18;for(const[a,b,c]of[[v0,v0+.1,"#5ca53a"],[v0+.1,v0+.12,"#aac850"]]){
+   const q=[[.08,a],[.92,a],[.92,b],[.08,b]].map(([u,w])=>[cx+(u-w)*34,cy-17+(u+w)*17]);poly(q,c)}}
+ }else if(t==2){
+  box(cx,cy,28,14,4,"#d6b882");box(cx+9,cy+1,6,3,6*k,"#e69632");
+  const z=28*k,top=cy-4-z;
+  ln(cx-24,cy-4,cx-24,top,"#644628",2);ln(cx+24,cy-4,cx+24,top,"#644628",2);ln(cx,cy+10,cx,top+14,"#644628",2);
+  for(let i=0;i<6;i++){const u0=i/6,u1=(i+1)/6,c=i%2?"#faf0dc":"#c84632";
+   poly([[cx+(u0)*56-28,top+(u0)*0],[cx+u1*56-28,top],[cx+u1*56-28,top],[cx+u0*56-28,top]],c)}
+  poly([[cx-28,top],[cx,top-14],[cx+28,top],[cx,top+14]],"#c84632");
+  poly([[cx-28,top],[cx,top+14],[cx,top+19],[cx-28,top+5]],"#c84632");poly([[cx+28,top],[cx,top+14],[cx,top+19],[cx+28,top+5]],"#f0e6d2");
+  for(let i=0;i<4;i++)poly([[cx-14+i*14-7,top-3],[cx-14+i*14,top-7],[cx-14+i*14+7,top-3],[cx-14+i*14,top+1]],i%2?"#f0e6d2":"#c84632");
+ }else if(t==3){
+  const h=10*k;cil(cx,cy,15,8,h,"#968c7d","#b4aa96");oval(cx,cy-h,10,5,"#3278b4");
+  const a=28*k;ln(cx-13,cy-h,cx-13,cy-h-a,"#644628",2.5);ln(cx+13,cy-h,cx+13,cy-h-a,"#644628",2.5);ln(cx-15,cy-h-a,cx+15,cy-h-a,"#644628",2.5);
+  ln(cx,cy-h-a,cx,cy-h-a/2,"#644628",1);ctx.fillStyle="#825a32";ctx.fillRect(cx-4,cy-h-a/2,8,6);
+ }else if(t==4){
+  const c="#deba80";box(cx,cy-12,9,5,58*k,c);const ty=cy-12-58*k;
+  for(const z of[16,30,44]){const yy=cy-12-z*k;ln(cx-9,yy,cx-14,yy-1,"#5a3c23",2);ln(cx+9,yy,cx+14,yy-1,"#5a3c23",2)}
+  poly([[cx-9,ty],[cx+9,ty],[cx,ty-14]],"#cda569");oval(cx,ty-16,3,4,"#fff");
+  const h=28*k;box(cx,cy+2,30,15,h,c);box(cx,cy+2-h,18,9,10*k,"#e6c48a");
+  ctx.fillStyle="#eed296";ctx.beginPath();ctx.arc(cx,cy+2-h-10*k,10,Math.PI,0);ctx.fill();
+  poly([[cx+11,cy+17],[cx+19,cy+13],[cx+19,cy+13-15*k],[cx+11,cy+17-15*k]],"#46281a");
+ }else if(t==5){
+  const h=22*k;box(cx,cy,26,13,h,"#e8d09e");box(cx,cy-h,14,7,6*k,"#f0dcaa");
+  poly([[cx+10,cy+8],[cx+17,cy+5],[cx+17,cy+5-14*k],[cx+10,cy+8-14*k]],"#3c64a0");
+  const by=cy-h-6*k;ln(cx,by,cx,by-28,"#5a3c23",2);poly([[cx,by-28],[cx+16,by-23],[cx,by-17]],"#28965a");
+ }else{
+  celeiro(cx+10,cy-5,13,6,16*k,16*k);celeiro(cx-10,cy+5,14,7,18*k,17*k);box(cx+17,cy+9,8,4,8*k,"#a06e3c");
+ }
+ if(k<.99){ctx.save();ctx.translate(cx+16,cy-36-22*k);ctx.rotate(Math.sin(anim*25)*.8);ln(0,10,0,-10,"#5a3c23",3);ln(-7,-9,7,-9,"#9aa0a8",4);ctx.restore()}
+}
+function palmeira(cx,cy,seed){
+ const sw=Math.sin(anim*1.6+seed)*3;ctx.lineCap="round";
+ const tx=cx+4+sw*.5,ty=cy-36;ctx.strokeStyle="#78522e";ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(cx-4,cy-18,tx,ty);ctx.stroke();
+ ctx.strokeStyle="#328c3c";ctx.lineWidth=3;
+ for(let i=0;i<7;i++){const a=i*Math.PI*2/7+sw*.03;ctx.beginPath();ctx.moveTo(tx,ty);ctx.quadraticCurveTo(tx+Math.cos(a)*12,ty-9+Math.sin(a)*3,tx+Math.cos(a)*22,ty+4+Math.sin(a)*7);ctx.stroke()}
+}
+function tile(gx,gy,cx,cy){
+ if(rio(gx,gy)){dia(cx,cy,TW/2,TH/2,"#4090c4");ctx.strokeStyle="rgba(150,210,240,.8)";ctx.lineWidth=2;
+  for(let i=0;i<2;i++){const f=(anim*.5+i*.5+gx*.13)%1,x=cx-24+f*40,y=cy-4+i*8;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+10,y);ctx.stroke()}return}
+ const h=(gx*73+gy*151+gx*gy*7)%11;
+ dia(cx,cy,TW/2,TH/2,h<3?"#e4c890":h<8?"#ecd29a":"#d6cc82");
+ const g=gy<=2?(((gx+gy)%2)?"#4f9a46":"#7cb84e"):"#a8a458";
+ ctx.globalAlpha=gy<=2?.5:gy<=3?.32:.18;dia(cx,cy,TW/2,TH/2,g);ctx.globalAlpha=1;
+ ctx.strokeStyle="rgba(190,154,100,.4)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-20);ctx.lineTo(cx+40,cy);ctx.lineTo(cx,cy+20);ctx.lineTo(cx-40,cy);ctx.closePath();ctx.stroke();
+}
+function canoa(cx,cy){oval(cx,cy+2,16,4.5,"rgba(0,0,0,.16)");oval(cx,cy-1,16,4.5,"#784e28");oval(cx,cy-2,11,2.5,"#3c2814");
+ ctx.fillStyle="#f0ebdc";ctx.fillRect(cx-3,cy-16,7,11);oval(cx+1,cy-19,3,3,"#6e462d")}
+function pessoa(w){
+ const cx=(w.x-w.y)*TW/2,cy=TH/2+(w.x+w.y)*TH/2,b=Math.abs(Math.sin(anim*9+w.ph))*2;
+ oval(cx,cy,5,2.5,"rgba(0,0,0,.2)");ctx.fillStyle=w.c;ctx.fillRect(cx-4,cy-14-b,8,13);oval(cx,cy-17-b,3.2,3.2,"#6e462d");
+}
+function draw(){
+ const dpr=devicePixelRatio||1,r=cv.getBoundingClientRect();
+ if(cv.width!=Math.round(r.width*dpr)||cv.height!=Math.round(r.height*dpr)){cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr)}
+ cssW=r.width;cssH=r.height;sc=Math.min(cssW/WW,cssH/WH);offX=(cssW-WW*sc)/2;offY=(cssH-WH*sc)/2;
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);
+ ctx.fillStyle="rgba(255,240,190,.6)";ctx.beginPath();ctx.arc(cssW*.85,cssH*.12,22,0,7);ctx.fill();
+ ctx.translate(offX,offY);ctx.scale(sc,sc);ctx.translate(SX,SY);
+ const MY=N*TH/2,B=N*TH,L=-N*TW/2,R=N*TW/2;
+ poly([[L,MY],[0,B],[0,B+16],[L,MY+16]],"#8c6238");poly([[R,MY],[0,B],[0,B+16],[R,MY+16]],"#704c2c");
+ const cn=Math.floor((anim*.35)%N);
+ for(let gy=0;gy<N;gy++)for(let gx=0;gx<N;gx++){
+  const cx=(gx-gy)*TW/2,cy=TH/2+(gx+gy)*TH/2;tile(gx,gy,cx,cy);
+  if(gy==0&&gx==cn)canoa(cx,cy);
+  const t=grid[gx][gy];
+  if(t>=0)obra(t,cx,cy,Math.min(1,(anim-nasceu[gx][gy])/.6),gx+gy);
+  else if(livre(gx,gy)){const h=(gx*31+gy*17+gx*gy)%9;if(h==0)palmeira(cx,cy+4,gx);else if(h==4){oval(cx-1,cy-2,7,4.5,"#6e8c46");oval(cx+4,cy-4,6,4,"#82a550")}}
+  if(estado==1&&sel>=0&&gx==hx&&gy==hy){
+   const ok=livre(gx,gy)&&ouro>=CUSTO[sel];
+   if(grid[gx][gy]<0&&!rio(gx,gy)){ctx.globalAlpha=.6;obra(sel,cx,cy,1,gx+gy);ctx.globalAlpha=1}
+   dia(cx,cy,40,20,ok?"rgba(80,220,80,.45)":"rgba(230,60,60,.5)");
+  }
+  for(const w of pessoas)if(Math.round(w.x)==gx&&Math.round(w.y)==gy)pessoa(w);
+ }
+ if(pausado&&estado==1){ctx.font="bold 46px Georgia,serif";ctx.fillStyle="rgba(60,35,15,.8)";ctx.textAlign="center";ctx.fillText("PAUSADO",0,150)}
+}
+
+// ===== interface =====
+const pal=$("pal");
+NOME.forEach((n,i)=>{const b=document.createElement("button");b.className="b";b.innerHTML=`<i style="background:${COR[i]}"></i><strong>${n}</strong><em>${CUSTO[i]} ouro</em><small>${DESC[i]}</small>`;
+ b.onclick=()=>{sel=sel==i?-1:i;if(sel<0){hx=hy=-1}};pal.appendChild(b)});
+const bs=[...pal.children];
+function chip(id,v,m,al){const e=$(id);e.children[1].textContent=v;e.children[2].textContent=m;e.classList.toggle("al",!!al&&Math.floor(anim*3)%2==0)}
+function hud(){
+ chip("cO",Math.floor(ouro),"/"+est());chip("cC",Math.floor(comida),"/"+est(),comida<10);chip("cA",Math.floor(agua),"/"+est(),agua<10);chip("cP",pop,"/"+cap());
+ $("ano").textContent=ano+" d.C.";
+ const ok=[pop>=50,total()>=5,comida>0&&agua>0];
+ $("obj").innerHTML=`<i class="${ok[0]?"ok":""}">${ok[0]?"✓":"○"} 50 hab. (${pop})</i><i class="${ok[1]?"ok":""}">${ok[1]?"✓":"○"} 5 obras (${total()})</i><i class="${ok[2]?"ok":""}">${ok[2]?"✓":"○"} comida e água</i>`;
+ bs.forEach((b,i)=>{b.classList.toggle("sel",sel==i);b.classList.toggle("no",ouro<CUSTO[i])});
+}
+function overlay(t,linhas,bt){$("box").children[0].textContent=t;$("ol").innerHTML=linhas.map(l=>`<p>${l}</p>`).join("");$("ob").textContent=bt;$("ov").style.display="flex"}
+function fim(){
+ if(estado==2)overlay("Cidade próspera!",[`Sua aldeia virou uma cidade próspera no ano de ${ano} d.C.!`,`População ${pop} · Ouro ${Math.floor(ouro)} · Alimentos ${Math.floor(comida)} · Água ${Math.floor(agua)}`,`Casas ${qtd[0]} · Fazendas ${qtd[1]} · Mercados ${qtd[2]} · Poços ${qtd[3]} · Mesquitas ${qtd[4]} · Escolas ${qtd[5]} · Armazéns ${qtd[6]}`,`Tempo ${Math.floor(tempo/60)}:${String(Math.floor(tempo%60)).padStart(2,"0")}`,"A riqueza do Mali dependeu do trabalho de muita gente, inclusive de pessoas escravizadas. Conhecer essa história faz parte de entender o passado."],"JOGAR DE NOVO");
+ else overlay("O reinado terminou",["Chegamos a 1337 e Mansa Musa deixou o trono. Sua cidade ainda não prosperou.",`População ${pop}/50 · Construções ${total()}/5 · Ouro ${Math.floor(ouro)}`,"Dica: casas aumentam a população; fazendas e poços mantêm todos vivos.","Tente de novo!"],"JOGAR DE NOVO");
+}
+$("ob").onclick=reset;
+$("br").onclick=reset;
+$("bp").onclick=()=>{if(estado==1){pausado=!pausado;$("bp").textContent=pausado?"Continuar":"Pausar"}};
+
+function pick(e){
+ const r=cv.getBoundingClientRect(),px=(e.clientX-r.left-offX)/sc-SX,py=(e.clientY-r.top-offY)/sc-SY;
+ const u=px/(TW/2),v=(py-TH/2)/(TH/2),gx=Math.round((u+v)/2),gy=Math.round((v-u)/2);
+ return gx>=0&&gy>=0&&gx<N&&gy<N?[gx,gy]:null;
+}
+let down=false;
+cv.addEventListener("pointerdown",e=>{if(estado!=1||pausado)return;down=true;cv.setPointerCapture(e.pointerId);const p=pick(e);[hx,hy]=p||[-1,-1]});
+cv.addEventListener("pointermove",e=>{if(estado!=1)return;if(down||e.pointerType=="mouse"){const p=pick(e);[hx,hy]=p||[-1,-1]}});
+cv.addEventListener("pointerup",e=>{if(!down)return;down=false;const p=pick(e);if(p&&estado==1&&!pausado){if(sel<0)aviso("Escolha uma construção abaixo primeiro!");else construir(p[0],p[1])}if(e.pointerType!="mouse"){hx=hy=-1}});
+cv.addEventListener("pointercancel",()=>{down=false;hx=hy=-1});
+document.addEventListener("contextmenu",e=>e.preventDefault());
+
+reset();estado=0;
+overlay("Império do Mali",["Ano de 1312. Você governa uma pequena aldeia no reinado de Mansa Musa.","COMO JOGAR: escolha uma construção na barra de baixo e toque no mapa (ou arraste para ajustar e solte para construir).","META: 50 habitantes, 5 construções e comida e água sobrando.","Cuidado com a seca! Construa fazendas e poços."],"JOGAR");
+let last=performance.now();
+(function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;update(dt);draw();hud();requestAnimationFrame(loop)})(last);
+</script>
+</body>
+</html>
