@@ -284,8 +284,8 @@ function chip(id,v,m,al){const e=$(id);e.children[1].textContent=v;e.children[2]
 function hud(){
  chip("cO",Math.floor(ouro),"/"+est());chip("cC",Math.floor(comida),"/"+est(),comida<10);chip("cA",Math.floor(agua),"/"+est(),agua<10);chip("cP",pop,"/"+cap());
  $("ano").textContent=ano+" d.C.";
- const ok=[pop>=50,total()>=5,comida>0&&agua>0];
- $("obj").innerHTML=`<i class="${ok[0]?"ok":""}">${ok[0]?"✓":"○"} 50 hab. (${pop})</i><i class="${ok[1]?"ok":""}">${ok[1]?"✓":"○"} 5 obras (${total()})</i><i class="${ok[2]?"ok":""}">${ok[2]?"✓":"○"} comida e água</i>`;
+ const ok=[pop>=125,total()>=5,comida>0&&agua>0];
+ $("obj").innerHTML=`<i class="${ok[0]?"ok":""}">${ok[0]?"✓":"○"} 125 hab. (${pop})</i><i class="${ok[1]?"ok":""}">${ok[1]?"✓":"○"} 5 obras (${total()})</i><i class="${ok[2]?"ok":""}">${ok[2]?"✓":"○"} comida e água</i>`;
  bs.forEach((b,i)=>{b.classList.toggle("sel",sel==i);b.classList.toggle("no",ouro<CUSTO[i])});
 }
 function overlay(t,linhas,bt){$("box").children[0].textContent=t;$("ol").innerHTML=linhas.map(l=>`<p>${l}</p>`).join("");$("ob").textContent=bt;$("ov").style.display="flex"}
