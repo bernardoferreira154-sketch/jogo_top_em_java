@@ -291,7 +291,7 @@ function hud(){
 function overlay(t,linhas,bt){$("box").children[0].textContent=t;$("ol").innerHTML=linhas.map(l=>`<p>${l}</p>`).join("");$("ob").textContent=bt;$("ov").style.display="flex"}
 function fim(){
  if(estado==2)overlay("Cidade próspera!",[`Sua aldeia virou uma cidade próspera no ano de ${ano} d.C.!`,`População ${pop} · Ouro ${Math.floor(ouro)} · Alimentos ${Math.floor(comida)} · Água ${Math.floor(agua)}`,`Casas ${qtd[0]} · Fazendas ${qtd[1]} · Mercados ${qtd[2]} · Poços ${qtd[3]} · Mesquitas ${qtd[4]} · Escolas ${qtd[5]} · Armazéns ${qtd[6]}`,`Tempo ${Math.floor(tempo/60)}:${String(Math.floor(tempo%60)).padStart(2,"0")}`,"A riqueza do Mali dependeu do trabalho de muita gente, inclusive de pessoas escravizadas. Conhecer essa história faz parte de entender o passado."],"JOGAR DE NOVO");
- else overlay("O reinado terminou",["Chegamos a 1337 e Mansa Musa deixou o trono. Sua cidade ainda não prosperou.",`População ${pop}/50 · Construções ${total()}/5 · Ouro ${Math.floor(ouro)}`,"Dica: casas aumentam a população; fazendas e poços mantêm todos vivos.","Tente de novo!"],"JOGAR DE NOVO");
+ else overlay("O reinado terminou",["Chegamos a 1337 e Mansa Musa deixou o trono. Sua cidade ainda não prosperou.",`População ${pop}/150 · Construções ${total()}/5 · Ouro ${Math.floor(ouro)}`,"Dica: casas aumentam a população; fazendas e poços mantêm todos vivos.","Tente de novo!"],"JOGAR DE NOVO");
 }
 $("ob").onclick=reset;
 $("br").onclick=reset;
